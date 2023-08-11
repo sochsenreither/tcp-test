@@ -8,12 +8,12 @@ mod node;
 
 #[tokio::main]
 async fn main() {
-    let n = 5;
+    let n = 4;
     let runtime = 15;
 
     // Create n local ip addresses with different ports.
     let addresses = (0..n)
-        .map(|x| format!("127.0.0.1:123{}", x).parse::<SocketAddr>().unwrap())
+        .map(|x| format!("127.0.0.1:{}", 8000 + x).parse::<SocketAddr>().unwrap())
         .collect::<Vec<_>>();
 
     // Spawn n nodes.

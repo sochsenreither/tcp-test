@@ -1,7 +1,6 @@
 use crate::message::NetworkMessage;
 use bytes::Bytes;
 use futures::{SinkExt, StreamExt};
-use log::{debug, info, warn};
 use std::{collections::HashMap, net::SocketAddr};
 use tokio::{
     net::{TcpListener, TcpStream},
@@ -64,14 +63,14 @@ impl NetworkSender {
             // Connect to provided socket address.
             let stream = match TcpStream::connect(address).await {
                 Ok(stream) => {
-                    info!("Outgoing connection established with {}", address);
+                    println!("Outgoing connection established with {}", address);
                     stream
                 }
                 // If the connection fails return. This means this worker thread is killed. Therefore
                 // using the above created channel will fail. Because of this a new worker will be
                 // spawned by the NetworkSender.
                 Err(e) => {
-                    warn!("Failed to connect to {}: {}", address, e);
+                    println!("Failed to connect to {}: {}", address, e);
                     return;
                 }
             };
@@ -86,9 +85,9 @@ impl NetworkSender {
 
                 // Send the message to the nework
                 match transport.send(bytes).await {
-                    Ok(_) => debug!("Successfully sent message to {}", address),
+                    Ok(_) => println!("Successfully sent message to {}", address),
                     Err(e) => {
-                        warn!("Failed to send message to {}: {}", address, e);
+                        println!("Failed to send message to {}: {}", address, e);
                         return;
                     }
                 }
@@ -119,7 +118,7 @@ impl NetworkReceiver {
             .await
             .expect("Failed to bind TCP port");
 
-        debug!("Listening on {}", self.address);
+        println!("Listening on {}", self.address);
 
         // Continuously accept new incoming connections.
         loop {
@@ -127,11 +126,11 @@ impl NetworkReceiver {
                 Ok(value) => value,
                 // If there is an error with the connection just continue with the loop.
                 Err(e) => {
-                    warn!("{}", e);
+                    println!("{}", e);
                     continue;
                 }
             };
-            info!("incoming connection established with {}", peer);
+            println!("incoming connection established with {}", peer);
             // Spawn a new worker that handles the just established connection.
             Self::spawn_worker(socket, peer, self.deliver.clone()).await;
         }
@@ -150,18 +149,18 @@ impl NetworkReceiver {
                         let message = bincode::deserialize(&m.freeze()).unwrap();
                         match deliver.send(message).await {
                             Ok(_) => (),
-                            Err(e) => warn!("{}", e),
+                            Err(e) => println!("{}", e),
                         }
                     }
                     // If there is some error with the framed TCP stream return. This will
                     // kill the worker thread.
                     Err(e) => {
-                        warn!("{}", e);
+                        println!("{}", e);
                         return;
                     }
                 }
             }
-            warn!("Connection closed by peer {}", peer);
+            println!("Connection closed by peer {}", peer);
         });
     }
 }

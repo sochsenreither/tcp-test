@@ -1,6 +1,5 @@
 use std::net::SocketAddr;
 
-use log::warn;
 use rand::distributions::{Alphanumeric, DistString};
 use rand::{thread_rng, Rng};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -27,10 +26,10 @@ impl Core {
     ) {
         let (tx_tick, rx_tick) = channel(10);
 
-        // Spawn a ticker that sends a value to rx_tick at a random value between 500ms and 1000ms.
+        // Spawn a ticker that sends a value to rx_tick at a random value between 20ms and 500ms.
         tokio::spawn(async move {
             loop {
-                let duration = thread_rng().gen_range(50..100);
+                let duration = thread_rng().gen_range(20..500);
                 tokio::time::sleep(Duration::from_millis(duration)).await;
                 tx_tick.send(true).await.unwrap();
             }
@@ -59,7 +58,7 @@ impl Core {
         };
         match self.tx.send(message).await {
             Ok(_) => (),
-            Err(e) => warn!("{}", e),
+            Err(e) => println!("{}", e),
         }
     }
 
