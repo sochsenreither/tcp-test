@@ -12,10 +12,14 @@ impl Node {
         // Create channels for the networking.
         let (tx_rec, rx_rec) = channel(10_000);
         let (tx_send, rx_send) = channel(10_000);
+        let (tx_retransmit, rx_retransmit) = channel(10_000);
+
+        // Run the retransmitter
+        NetworkRetransmitter::run(rx_retransmit, tx_send.clone());
 
         // Create a network receiver and sender.
         let network_receiver = NetworkReceiver::new(nodes[id], tx_rec);
-        let mut network_sender = NetworkSender::new(rx_send);
+        let mut network_sender = NetworkSender::new(rx_send, tx_retransmit);
 
         tokio::spawn(async move {
             network_receiver.run().await;
@@ -26,6 +30,6 @@ impl Node {
 
         sleep(Duration::from_millis(50)).await;
 
-        Core::spawn(id, nodes[id], nodes, tx_send, rx_rec);
+        Core::spawn(id, nodes[id], nodes, tx_send.clone(), rx_rec);
     }
 }

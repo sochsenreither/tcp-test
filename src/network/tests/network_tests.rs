@@ -6,10 +6,40 @@ use tokio::time::Duration;
 use super::*;
 
 #[tokio::test]
+async fn retransmit() {
+    let (tx_retransmit, rx_retransmit) = channel(10);
+    let (tx, rx) = channel(10);
+    let mut sender = NetworkSender::new(rx, tx_retransmit);
+    tokio::spawn(async move {
+        sender.run().await;
+    });
+
+    // Run the retransmitter
+    NetworkRetransmitter::run(rx_retransmit, tx.clone());
+
+    // Send a message via the network sender.
+    let address = "127.0.0.1:8080".parse::<SocketAddr>().unwrap();
+    let message = NetworkMessage {
+        sender: address,
+        addresses: vec![address],
+        message: "Hello, World!".to_string(),
+    };
+    let _ = tx.send(message).await;
+
+    sleep(Duration::from_millis(50)).await;
+    let handle = listener(address);
+
+    // Use the handle to check if the sender successfully transmitted the data over the TCP
+    // connection.
+    assert!(handle.await.is_ok());
+}
+
+#[tokio::test]
 async fn send() {
     // Create a network sender and run it.
+    let (tx_retransmit, _) = channel(10);
     let (tx, rx) = channel(10);
-    let mut sender = NetworkSender::new(rx);
+    let mut sender = NetworkSender::new(rx, tx_retransmit);
     tokio::spawn(async move {
         sender.run().await;
     });
@@ -34,8 +64,9 @@ async fn send() {
 #[tokio::test]
 async fn broadcast() {
     // Create a network sender and run it.
+    let (tx_retransmit, _) = channel(10);
     let (tx, rx) = channel(10);
-    let mut sender = NetworkSender::new(rx);
+    let mut sender = NetworkSender::new(rx, tx_retransmit);
     tokio::spawn(async move {
         sender.run().await;
     });
